@@ -1,7 +1,6 @@
 import React from "react";
 import axios from "axios";
-
-import "./App.css";
+import { sortBy } from "lodash";
 
 const API_ENDPOINT = "https://hn.algolia.com/api/v1/search?query=";
 
@@ -98,14 +97,16 @@ const App = () => {
   };
 
   return (
-    <div className="container">
-      <h1 className="headline-primary">My Hacker Stories</h1>
+    <div>
+      <h1>My Hacker Stories</h1>
 
       <SearchForm
         searchTerm={searchTerm}
         onSearchInput={handleSearchInput}
         onSearchSubmit={handleSearchSubmit}
       />
+
+      <hr />
 
       {stories.isError && <p>Something went wrong ...</p>}
 
@@ -119,7 +120,7 @@ const App = () => {
 };
 
 const SearchForm = ({ searchTerm, onSearchInput, onSearchSubmit }) => (
-  <form onSubmit={onSearchSubmit} className="search-form">
+  <form onSubmit={onSearchSubmit}>
     <InputWithLabel
       id="search"
       value={searchTerm}
@@ -129,11 +130,7 @@ const SearchForm = ({ searchTerm, onSearchInput, onSearchSubmit }) => (
       <strong>Search:</strong>
     </InputWithLabel>
 
-    <button
-      type="submit"
-      disabled={!searchTerm}
-      className="button button_large"
-    >
+    <button type="submit" disabled={!searchTerm}>
       Submit
     </button>
   </form>
@@ -150,16 +147,14 @@ const InputWithLabel = ({
   const inputRef = React.useRef();
 
   React.useEffect(() => {
-    if (isFocused) {
+    if (isFocused && inputRef.current) {
       inputRef.current.focus();
     }
   }, [isFocused]);
 
   return (
     <>
-      <label htmlFor={id} className="label">
-        {children}
-      </label>
+      <label htmlFor={id}>{children}</label>
       &nbsp;
       <input
         ref={inputRef}
@@ -167,31 +162,72 @@ const InputWithLabel = ({
         type={type}
         value={value}
         onChange={onInputChange}
-        className="input"
       />
     </>
   );
 };
 
-const List = ({ list, onRemoveItem }) =>
-  list.map((item) => (
-    <Item key={item.objectID} item={item} onRemoveItem={onRemoveItem} />
-  ));
+const SORTS = {
+  NONE: (list) => list,
+  TITLE: (list) => sortBy(list, "title"),
+  AUTHOR: (list) => sortBy(list, "author"),
+  COMMENT: (list) => sortBy(list, "num_comments").reverse(),
+  POINT: (list) => sortBy(list, "points").reverse(),
+};
+
+const List = ({ list, onRemoveItem }) => {
+  const [sort, setSort] = React.useState("NONE");
+
+  const handleSort = (sortKey) => {
+    setSort(sortKey);
+  };
+
+  const sortFunction = SORTS[sort];
+  const sortedList = sortFunction(list);
+
+  return (
+    <div>
+      <div>
+        <span>
+          <button type="button" onClick={() => handleSort("TITLE")}>
+            Title
+          </button>
+        </span>
+        <span>
+          <button type="button" onClick={() => handleSort("AUTHOR")}>
+            Author
+          </button>
+        </span>
+        <span>
+          <button type="button" onClick={() => handleSort("COMMENT")}>
+            Comments
+          </button>
+        </span>
+        <span>
+          <button type="button" onClick={() => handleSort("POINT")}>
+            Points
+          </button>
+        </span>
+        <span>Actions</span>
+      </div>
+
+      {sortedList.map((item) => (
+        <Item key={item.objectID} item={item} onRemoveItem={onRemoveItem} />
+      ))}
+    </div>
+  );
+};
 
 const Item = ({ item, onRemoveItem }) => (
-  <div className="item">
-    <span style={{ width: "40%" }}>
+  <div>
+    <span>
       <a href={item.url}>{item.title}</a>
     </span>
-    <span style={{ width: "30%" }}>{item.author}</span>
-    <span style={{ width: "10%" }}>{item.num_comments}</span>
-    <span style={{ width: "10%" }}>{item.points}</span>
-    <span style={{ width: "10%" }}>
-      <button
-        type="button"
-        onClick={() => onRemoveItem(item)}
-        className="button button_small"
-      >
+    <span>{item.author}</span>
+    <span>{item.num_comments}</span>
+    <span>{item.points}</span>
+    <span>
+      <button type="button" onClick={() => onRemoveItem(item)}>
         Dismiss
       </button>
     </span>
